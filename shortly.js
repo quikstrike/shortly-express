@@ -23,7 +23,7 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
-app.use(session({ secret: 'MAKERSQUARE', cookie: { maxAge: 60000 }}))
+app.use(session({ secret: 'MAKERSQUARE', cookie: { maxAge: 60000 }})) //create session
 
 
 var loggedInUsers = {}
@@ -31,19 +31,28 @@ var loggedInUsers = {}
 
 app.get('/',
 function(req, res) {
-  if(req.sessionID !== loggedInUsers[req.sessionID]){
+  if(loggedInUsers[req.sessionID] !== 1){ //redirect to login if not logged in
+    console.log("Sending To Login")
+    res.redirect(301,'/login')
+  }
+  res.render('index'); //else redirect to home
+});
+
+app.get('/create',
+function(req, res) {
+  if(loggedInUsers[req.sessionID] !== 1){ //if no session found
+    console.log("Sending To Login")
     res.redirect(301,'/login')
   }
   res.render('index');
 });
 
-app.get('/create',
-function(req, res) {
-  res.render('index');
-});
-
 app.get('/links',
 function(req, res) {
+  if(loggedInUsers[req.sessionID] !== 1){
+    console.log("Sending To Login")
+    res.redirect(301,'/login')
+  }
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
@@ -51,6 +60,10 @@ function(req, res) {
 
 app.post('/links',
 function(req, res) {
+  if(loggedInUsers[req.sessionID] !== 1){
+    console.log("Sending To Login")
+    res.redirect(301,'/login')
+  }
   var uri = req.body.url;
 
   if (!util.isValidUrl(uri)) {
@@ -86,6 +99,14 @@ function(req, res) {
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
+app.get('/logout',function(req,res){
+  if(loggedInUsers[req.sessionID] === 1){ //if logged in
+    delete loggedInUsers[req.sessionID] //delete session
+    console.log("Sending To Login")
+  }
+  res.redirect(301,'/') //go to home
+})
+
 app.get('/login',function(req,res){
   res.render('login');
 })
@@ -100,14 +121,17 @@ app.post('/login',function(req,res){
    .select('password')
    .where('username',userName)
    .then(function(password){  //callback after we grab the password
-     bcrypt.compare(pass,password[0].password,function(err,res){
-       if(res){
+     bcrypt.compare(pass,password[0].password,function(err,response){
+       if(response){
          //create session ID, store in database, and tell client to store it localy
          console.log("Password Matches")
          loggedInUsers[req.sessionID] = 1
+         console.log("Sending To Front Page")
+         res.redirect(301,'/')
        }else{
          //return username/password failed to authenticate
          console.log("Password Does Not Match")
+         res.redirect(301,'/login')
        }
      });
    })
@@ -129,7 +153,8 @@ app.post('/signup',function(req,res){
 
   nUser.save().then(function(newUser){
     Users.add(newUser)
-    res.send(201, "Created User Sucessfully")
+    //res.send(201, "Created User Sucessfully")
+    res.redirect(301,'/login')
   })
 })
 
