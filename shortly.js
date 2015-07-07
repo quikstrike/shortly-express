@@ -10,6 +10,7 @@ var User = require('./app/models/user');
 var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
+var bcrypt = require('bcrypt-nodejs')
 
 var app = express();
 
@@ -87,6 +88,44 @@ app.post('/login',function(req,res){
   // console.log(userName +" "+password )
   //check if username and password match in the database
   //if it does, return a session id to store, or return an error
+
+  var sessionID = db.knex('users') //set sessionID if authentication is successful
+               .select('password')
+               .where('username',userName)
+               .then(function(password){  //callback after we grab the password
+                 bcrypt.compare(pass,password[0].password,function(err,res){
+                   if(res){
+                     //create session ID, store in database, and tell client to store it localy
+                     console.log("Password Matches")
+                   }else{
+                     //return username/password failed to authenticate
+                     console.log("Password Does Not Match")
+                   }
+                 });
+               })
+
+
+  //run compare on the plaintext vs the hashed password
+
+  bcrypt.compare(pass,hash,function(err,res){
+    console.log(pass)
+    console.log(hash)
+    if(res){
+      //create session ID, store in database, and tell client to store it localy
+      console.log(pass)
+      console.log(hash)
+      console.log("Password Matches")
+    }else{
+      //return username/password failed to authenticate
+      console.log("Password Does Not Match")
+    }
+  });
+  //return session if true
+
+
+
+  var authUser = new User({'username': userName, 'password' : pass}) //return boolean?
+
 
 
 })
